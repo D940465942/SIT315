@@ -1,0 +1,116 @@
+// C++ code
+//
+/*
+  This program blinks the LED in pin 12 when there is a 
+  motion detected by the RIP motion sensor.
+*/
+
+// Pins
+const int led_pin = PB5;
+const int ultrasonic_pin = 4;
+const int motion_pin = 12;
+const int temperature_pin = A0;
+
+// counter and compare values
+const uint16_t t1_load = 0;
+const uint16_t t1_comp = 31250;
+
+void setup()
+{
+  Serial.begin(9600);
+  
+  // set led pin as output
+  DDRB |= (1 << led_pin);
+  
+  // reset timer1 control reg A
+  TCCR1A = 0;
+  
+  // set CTC mode
+  TCCR1B &= ~(1 << WGM13);
+  TCCR1B |= (1 << WGM12);
+  
+  // set to prescaler of 256
+  TCCR1B |= (1 << CS12);
+  TCCR1B &= ~(1 << CS11);
+  TCCR1B &= ~(1 << CS10);
+  
+  // reset timer1 and compare value
+  TCNT1 = t1_load;
+  OCR1A = t1_comp;
+  
+  // enable timer1 compare interrupt
+  TIMSK1 = (1 << OCIE1A);
+  
+  pinMode(motion_pin, INPUT);
+  pinMode(temperature_pin, INPUT);
+  
+  // set D4
+  PCMSK2 |= bit (PCINT20);
+  PCIFR  |= bit (PCIF2);   // clear any outstanding interrupts
+  PCICR  |= bit (PCIE2);   // enable pin change interrupts for D0 to D7
+  
+  // set D12
+  PCMSK0 |= bit (PCINT4);
+  PCIFR  |= bit (PCIF0);   // clear any outstanding interrupts
+  PCICR  |= bit (PCIE0);   // enable pin change interrupts for D8 to D13
+  
+  // set A0
+  PCMSK1 |= bit (PCINT8);
+  PCIFR  |= bit (PCIF1);   // clear any outstanding interrupts
+  PCICR  |= bit (PCIE1);   // enable pin change interrupts for A0 to A5
+  
+  // enable global interrupts
+  sei();
+}
+
+int motionResult = 0;
+long duration, cm;
+float temperatureResult = 0;
+
+void loop()
+{
+  motionResult = digitalRead(motion_pin);
+  
+  pinMode(ultrasonic_pin, OUTPUT);
+  digitalWrite(ultrasonic_pin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(ultrasonic_pin, HIGH);
+  delayMicroseconds(2);
+  
+  digitalWrite(ultrasonic_pin, LOW);
+  pinMode(ultrasonic_pin, INPUT);
+  duration = pulseIn(ultrasonic_pin, HIGH);
+  cm = duration / 29 / 2 +2;
+  
+  //Serial.print("The output value of ultrasonic sensor is ");
+  //Serial.println(cm);
+  
+  temperatureResult = digitalRead(temperature_pin);
+  delay(1000); // Wait for 1000 millisecond(s)
+}
+
+ISR(TIMER1_COMPA_vect){
+  PORTB ^= (1 << led_pin);
+}
+
+
+ISR(PCINT2_vect)
+{
+  // one of pins D0 to D7 has changed
+  Serial.print("The output value of ultrasonic sensor is ");
+  Serial.println(cm);
+}
+
+ISR(PCINT0_vect)
+{
+  // one of pins D8 to D13 has changed
+  Serial.print("The output value of motion sensor is ");
+  Serial.println(motionResult);
+}
+
+ISR(PCINT1_vect)
+{
+  // one of pins A0 to A5 has changed
+  Serial.print("The output value of temperature sensor is ");
+  Serial.println(temperatureResult);
+}
