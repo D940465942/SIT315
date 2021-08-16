@@ -1,6 +1,3 @@
-// pthreadMatrixMultiplication.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include "pch.h"
 #include <iostream>
 #include <random>
@@ -71,20 +68,23 @@ void output_arrays_to_file(int index, int array_1[DIM][DIM], int array_2[DIM][DI
 	file_out.close();
 }
 
+int calculate(int i, int j, int array1[DIM][DIM], int array2[DIM][DIM])
+{
+	int value = 0;
+	for (int k = 0; k < DIM; k++)
+	{
+		value += array1[i][k] * array2[k][j];
+	}
+	return value;
+}
+
 DWORD WINAPI one_thread(LPVOID lpParamter)
 {
-	int value;
 	for (int i = 0; i < DIM; i++)
 	{
 		for (int j = 0; j < DIM; j++)
 		{
-			value = 0;
-			for (int k = 0; k < DIM; k++)
-			{
-				value += input_array_1[i][k] * input_array_2[k][j];
-			}
-			output_array[i][j] = value;
-
+			output_array[i][j] = calculate(i, j, input_array_1, input_array_2);
 		}
 	}
 	return 0L;
